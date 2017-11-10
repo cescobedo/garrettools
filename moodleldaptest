@@ -1,0 +1,14 @@
+// LDAP Tools.
+
+EJEMPLO: moodleldap/login/index.php
+CUIDADO con los tabuladores.
+ldapsearch -h IPLDAP -p 389 -b "dc=dmoodc,dc=local"  -D "CN=moodle-user,CN=Users, DC=dmoodc,DC=local" -w "PasswordSecret" -x 
+
+ldapsearch -h ldap-dominio.net -p 636 -b "DC=dmoodc,DC=local"  -D "CN=moodle-consulta,CN=Users, DC=ad-dmoodc,DC=local" -w "Busqueda" -x
+
+Tira toda la estructura del ldap o te da fallos coherentes.
+
+ldapsearch -h moodleldap -p 389 -D "cn=wpadmin,ou=OUsers,o=otest" -w "wps2784" -x -LLL "CNAME= Nombre y apellidos"
+
+ldapsearch -hmoodleldap -p 389 -D "cn=wpadmin,ou=OUsers,o=otest" -w "wps2784" -x -LLL "uid=username" 
+
