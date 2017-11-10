@@ -1,0 +1,190 @@
+// MYSQL SQL TIPS.
+
+- mysqld --verbose --help 
+Para saber todo sobre la configuración del MySQL
+
+- Tamaño BD
+SELECT DISTINCT
+   TABLE_NAME,
+   INDEX_NAME
+FROM INFORMATION_SCHEMA.STATISTICS
+WHERE TABLE_SCHEMA = 'moodle22db"
+
+SELECT
+table_schema "Base de Datos",
+sum( data_length + index_length ) / 1024 / 1024 "Tamaño en MB"
+FROM
+information_schema.TABLES GROUP BY table_schema
+
+
+- Tamaño TABLAS
+
+SELECT CONCAT(table_schema, '.', table_name),
+CONCAT(ROUND(table_rows / 1000000, 2), 'M') rows,
+CONCAT(ROUND(data_length / ( 1024 * 1024 * 1024 ), 2), 'G') DATA,
+CONCAT(ROUND(index_length / ( 1024 * 1024 * 1024 ), 2), 'G') idx,
+CONCAT(ROUND(( data_length + index_length ) / ( 1024 * 1024 * 1024 ), 2), 'G') total_size, 
+ROUND(index_length / data_length, 2) idxfrac
+FROM information_schema.TABLES 
+where table_schema = 'mdl_sdig_s13'
+ORDER BY data_length + index_length DESC LIMIT 20;
+ALTER TABLE mdl_assign ENGINE='InnoDB'; ANALYZE TABLE mdl_assign;
+
+- Consulta de variables
+SHOW VARIABLES LIKE '%query_cache%';
+SHOW VARIABLES LIKE '%slow%';
+SHOW STATUS LIKE '%Qcache%';
+SHOW GLOBAL VARIABLES LIKE 'max_connections';
+SHOW GLOBAL STATUS LIKE 'max_used_connections';
+SHOW GLOBAL STATUS LIKE "Handler_read%";
+SHOW GLOBAL STATUS;
+SHOW INDEX FROM table
+show table status like '???'\G
+
+- Optimizar tabla
+
+ALTER TABLE mdl_assign ENGINE='InnoDB'; ANALYZE TABLE mdl_assign;
+
+
+select ENGINE, Round( DATA_LENGTH/1024/1024) as data_length , round(INDEX_LENGTH/1024/1024) as index_length, round(DATA_FREE/ 1024/1024) , (data_length+index_length)/round(DATA_FREE/ 1024/1024) from information_schema.tables where  table_name = 'mdl_user' and table_schema = 'moodle_s2' ;
+
+select table_schema, table_name,data_length, data_free, (data_free/data_length)*100 frag_percent , engine 
+from information_schema.tableswhere table_schema = 'moodle_s2' 
+order by frag_percent desc; 
+
+SELECT table_name Tabla,(data_length+index_length)/(1024*1024) Tamaño FROM information_schema.tables WHERE table_schema='midb';
+
+- SQL Course
+SELECT *, MONTH(FROM_UNIXTIME(timestart)), FROM_UNIXTIME(timestart) FROM mdl_user_enrolments WHERE enrolid = 12 
+
+SELECT *, YEAR(FROM_UNIXTIME(timestart)) ,count(MONTH(FROM_UNIXTIME(timestart))), MONTHNAME(FROM_UNIXTIME(timestart))
+FROM mdl_user_enrolments 
+WHERE enrolid = 12
+GROUP BY MONTH(FROM_UNIXTIME(timestart))
+
+
+SELECT *,YEAR(FROM_UNIXTIME(timestart)), MONTH(FROM_UNIXTIME(timestart)), MONTHNAME(FROM_UNIXTIME(timestart)), COUNT(*) FROM mdl_user_enrolments WHERE enrolid = 12 GROUP BY YEAR(FROM_UNIXTIME(timestart))*100 + MONTH(FROM_UNIXTIME(timestart))
+
+- SQL FOROS MOODLE
+Foro
+
+Post a eliminar dado un foro:
+
+SELECT p.*
+FROM mdl_forum_posts p
+,mdl_forum_discussions d
+where d.forum = 1379
+and p.discussion = d.id 
+and d.groupid <> -1
+
+Discussion a eliminar dado un foro:
+
+SELECT d.id
+FROM mdl_forum_posts p
+,mdl_forum_discussions d
+where d.forum = 1379
+and p.discussion = d.id 
+and d.groupid <> -1
+group by d.id 
+
+Traducir en CURSOS y posteriormente en NOT IN
+
+Para posts->
+SELECT p.*, d.forum
+FROM mdl_forum_posts p
+,mdl_forum_discussions d
+,mdl_forum f
+where d.forum = f.id
+and p.discussion = d.id 
+and d.groupid <> -1
+and f.course = 15
+
+SELECT p.*, d.forum
+FROM mdl_forum_posts p
+,mdl_forum_discussions d
+,mdl_forum f
+where d.forum = f.id
+and p.discussion = d.id 
+and d.groupid <> -1
+and f.course in (select c.id from mdl_course c where c.shortname not like ‘%DEMO')
+-> Para desicusiones
+
+SELECT d.*
+FROM mdl_forum_discussions d
+,mdl_forum f
+where d.forum = f.id
+and d.groupid <> -1
+and f.course in (select c.id from mdl_course c where c.shortname not like '%DEMO’)
+and f.course = 14
+
+- SQL para Matriculaciones y Calificaciones
+SELECT *,from_unixtime(`timestart`), from_unixtime(`timeend`) FROM `mdl_user_enrolments` WHERE `enrolid` = 21 
+
+SELECT ue.*,from_unixtime(ue.timestart), from_unixtime(ue.timeend) FROM mdl_enrol e, `mdl_user_enrolments` ue WHERE e.courseid = 10 and e.enrol = 'manual' and ue.enrolid = e.id 
+
+SELECT ra.id, ra.userid, ra.roleid, ra.contextid, u.firstname, u.lastname, c.id, c.shortname
+FROM mdl_role_assignments ra
+,mdl_context cx
+,mdl_course c
+,mdl_user u
+WHERE ra.contextid = cx.id
+and cx.contextlevel = 50
+and c.id = cx.instanceid
+and ra.roleid = 5
+and u.id = ra.userid
+and u.deleted = 0
+
+SELECT gi.id, gi.courseid, gi.iteminstance as idactividad , gi.itemname as activdad, gi.itemmodule as module, cm.id as cmid
+FROM mdl_grade_items gi,
+mdl_course_modules cm,
+mdl_modules m
+WHERE gi.courseid = 5
+and cm.course = gi.courseid
+and cm.instance = gi.iteminstance
+and m.name = gi.itemmodule
+and cm.module = m.id
+
+nota actividades
+SELECT gi.id, gi.courseid, gi.iteminstance as idactividad , gi.itemname as activdad, gi.itemmodule as module, cm.id as cmid, g.userid, g.finalgrade, g.timemodified, g.timecreated
+FROM mdl_grade_items gi right join mdl_grade_grades g on g.itemid = gi.id,
+mdl_course_modules cm,
+mdl_modules m
+WHERE gi.courseid = 5
+and cm.course = gi.courseid
+and cm.instance = gi.iteminstance
+and m.name = gi.itemmodule
+and cm.module = m.id
+
+
+Nota final
+SELECT gi.id, gi.courseid, gi.iteminstance as idactividad , gi.itemname as activdad, gi.itemmodule as module, g.userid, g.finalgrade, g.timemodified, g.timecreated
+FROM mdl_grade_items gi ,
+mdl_grade_grades g
+WHERE gi.courseid = 5
+and g.itemid = gi.id
+and gi.itemname is null
+
+
+SELECT c.id, count(c.id)
+FROM mdl_role_assignments ra
+	,mdl_context cx
+	,mdl_course c
+	,mdl_user u
+WHERE ra.contextid = cx.id
+	AND cx.contextlevel = 50
+	AND c.id = cx.instanceid
+	AND ra.roleid = 5
+	AND u.id = ra.userid
+	AND u.deleted = 0
+group by c.id
+
+SELECT count(g.id)
+FROM mdl_grade_items gi, 
+mdl_grade_grades g,
+mdl_course_modules cm,
+mdl_modules m
+WHERE g.itemid = gi.id
+AND cm.course = gi.courseid
+AND cm.instance = gi.iteminstance
+AND m.name = gi.itemmodule
+AND cm.module = m.id
