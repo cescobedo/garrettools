@@ -4,17 +4,19 @@
 Para saber todo sobre la configuración del MySQL
 
 - Tamaño BD
-SELECT DISTINCT
-   TABLE_NAME,
-   INDEX_NAME
-FROM INFORMATION_SCHEMA.STATISTICS
-WHERE TABLE_SCHEMA = 'moodle22db"
-
 SELECT
 table_schema "Base de Datos",
 sum( data_length + index_length ) / 1024 / 1024 "Tamaño en MB"
 FROM
-information_schema.TABLES GROUP BY table_schema
+information_schema.TABLES 
+WHERE TABLE_SCHEMA = 'moodle22db'
+GROUP BY table_schema
+
+SELECT DISTINCT
+   TABLE_NAME,
+   INDEX_NAME
+FROM INFORMATION_SCHEMA.STATISTICS
+WHERE TABLE_SCHEMA = 'moodle22db'
 
 
 - Tamaño TABLAS
@@ -28,7 +30,6 @@ ROUND(index_length / data_length, 2) idxfrac
 FROM information_schema.TABLES 
 where table_schema = 'mdl_sdig_s13'
 ORDER BY data_length + index_length DESC LIMIT 20;
-ALTER TABLE mdl_assign ENGINE='InnoDB'; ANALYZE TABLE mdl_assign;
 
 - Consulta de variables
 SHOW VARIABLES LIKE '%query_cache%';
@@ -43,7 +44,8 @@ show table status like '???'\G
 
 - Optimizar tabla
 
-ALTER TABLE mdl_assign ENGINE='InnoDB'; ANALYZE TABLE mdl_assign;
+ALTER TABLE mdl_assign ENGINE='InnoDB'; 
+ANALYZE TABLE mdl_assign;
 
 
 select ENGINE, Round( DATA_LENGTH/1024/1024) as data_length , round(INDEX_LENGTH/1024/1024) as index_length, round(DATA_FREE/ 1024/1024) , (data_length+index_length)/round(DATA_FREE/ 1024/1024) from information_schema.tables where  table_name = 'mdl_user' and table_schema = 'moodle_s2' ;
